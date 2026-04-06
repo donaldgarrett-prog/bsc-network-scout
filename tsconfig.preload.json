@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "strict": false,
+    "target": "es2015",
+    "outDir": "dist-electron/electron"
+  },
+  "include": ["electron/preload.ts"]
+}

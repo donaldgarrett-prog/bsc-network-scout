@@ -231,7 +231,7 @@ export default function App() {
   const [hosts, setHosts] = useState([]);
   const [selectedHost, setSelectedHost] = useState(null);
   const [scanType, setScanType] = useState("quick");
-  const [subnet, setSubnet] = useState("192.168.1.0/24");
+  const [subnet, setSubnet] = useState("192.168.4.0/22");
   const termRef = useRef(null);
 
   useEffect(() => { if (termRef.current) termRef.current.scrollTop = termRef.current.scrollHeight; }, [scanLines]);
@@ -241,44 +241,107 @@ export default function App() {
     setScanLines([]);
     setProgress(0);
     setHosts([]);
-    const lines = [
-      { t:0,    color:TEAL,        text:`[BSC-SCOUT] Initializing scan engine v1.0.4` },
-      { t:400,  color:DIM,         text:`[CONFIG]    Subnet: ${subnet}` },
-      { t:700,  color:DIM,         text:`[CONFIG]    Scan type: ${scanType.toUpperCase()}` },
-      { t:1000, color:DIM,         text:`[CONFIG]    Port range: ${scanType==="quick"?"top-100":"top-1000"}` },
-      { t:1400, color:TEAL,        text:`[ARP]       Broadcasting ARP requests...` },
-      { t:2000, color:"#7fdbff",   text:`[DISCO]     Host found → 192.168.1.1   (Netgear)` },
-      { t:2400, color:"#7fdbff",   text:`[DISCO]     Host found → 192.168.1.10  (Raspberry Pi)` },
-      { t:2700, color:"#7fdbff",   text:`[DISCO]     Host found → 192.168.1.15  (Apple)` },
-      { t:3000, color:"#7fdbff",   text:`[DISCO]     Host found → 192.168.1.20  (Samsung)` },
-      { t:3300, color:"#7fdbff",   text:`[DISCO]     Host found → 192.168.1.25  (Nest Labs)` },
-      { t:3600, color:"#7fdbff",   text:`[DISCO]     Host found → 192.168.1.30  (Dell)` },
-      { t:3900, color:"#7fdbff",   text:`[DISCO]     Host found → 192.168.1.40  (TP-Link)` },
-      { t:4200, color:"#7fdbff",   text:`[DISCO]     Host found → 192.168.1.55  (Apple)` },
-      { t:4600, color:TEAL,        text:`[PORT]      Scanning open ports on 8 hosts...` },
-      { t:5200, color:"#f39c12",   text:`[WARN]      192.168.1.1  → port 22 open (SSH)` },
-      { t:5500, color:"#e74c3c",   text:`[CRIT]      192.168.1.10 → port 5900 open (VNC)` },
-      { t:5800, color:"#e74c3c",   text:`[CRIT]      192.168.1.30 → port 3389 open (RDP)` },
-      { t:6100, color:"#e74c3c",   text:`[CRIT]      192.168.1.30 → port 445 open (SMB)` },
-      { t:6400, color:"#f39c12",   text:`[WARN]      192.168.1.20 → port 7676 open (unencrypted media)` },
-      { t:6800, color:TEAL,        text:`[VULN]      Running vulnerability fingerprint...` },
-      { t:7400, color:DIM,         text:`[VULN]      Checking CVE database signatures...` },
-      { t:8000, color:DIM,         text:`[VULN]      Analyzing firmware indicators...` },
-      { t:8600, color:TEAL,        text:`[RISK]      Calculating risk scores...` },
-      { t:9200, color:"#2ecc71",   text:`[DONE]      Scan complete — 8 hosts, 3 high risk, 3 medium risk` },
-      { t:9500, color:GOLD,        text:`[BSC]       Generating report...` },
-    ];
-    for (let i = 0; i < lines.length; i++) {
-      await sleep(i===0 ? 0 : lines[i].t - lines[i-1].t);
-      setScanLines(prev => [...prev, lines[i]]);
-      setProgress(Math.round((i/(lines.length-1))*100));
+
+    const addLine = (text, color = GOLD) => {
+      setScanLines(prev => [...prev, { text, color }]);
+    };
+
+    addLine(`[BSC-SCOUT] Initializing scan engine v1.0.4`, TEAL);
+    await sleep(300);
+    addLine(`[CONFIG]    Subnet: ${subnet}`, DIM);
+    await sleep(300);
+    addLine(`[CONFIG]    Scan type: ${scanType.toUpperCase()}`, DIM);
+    await sleep(400);
+    setProgress(5);
+
+    try {
+      if (window.bscScout && window.bscScout.startScan) {
+        addLine(`[ARP]       Broadcasting ARP requests on ${subnet}...`, TEAL);
+        setProgress(10);
+
+        window.bscScout.onScanProgress((data) => {
+          if (data.phase === "ping") {
+            addLine(`[PING]      Sweeping ${subnet} for live hosts...`, TEAL);
+            setProgress(20);
+          } else if (data.phase === "arp") {
+            addLine(`[ARP]       ${data.found} hosts found — reading MAC addresses...`, "#7fdbff");
+            setProgress(40);
+          } else if (data.phase === "ports") {
+            addLine(`[PORT]      Scanning ports on ${data.found} hosts...`, TEAL);
+            setProgress(50);
+          } else if (data.phase === "host-done") {
+            const riskColor = data.risk === "high" ? "#e74c3c" : data.risk === "medium" ? "#f39c12" : "#2ecc71";
+            const prefix = data.risk === "high" ? "[CRIT]" : data.risk === "medium" ? "[WARN]" : "[OK]  ";
+            addLine(`${prefix}      ${data.ip}  →  ${data.risk} risk`, riskColor);
+          }
+        });
+
+        const results = await window.bscScout.startScan(subnet);
+        window.bscScout.removeScanProgress();
+
+        setProgress(90);
+
+        if (results.length === 0) {
+          addLine(`[WARN]      No hosts found on ${subnet}`, "#f39c12");
+          addLine(`[TIP]       Try checking your subnet range`, DIM);
+          setProgress(100);
+          await sleep(1500);
+          setScreen("results");
+          return;
+        }
+
+        const high = results.filter(h => h.risk === "high").length;
+        const medium = results.filter(h => h.risk === "medium").length;
+        addLine(`[DONE]      Scan complete — ${results.length} hosts, ${high} high risk, ${medium} medium risk`, "#2ecc71");
+        await sleep(300);
+        addLine(`[BSC]       Generating report...`, GOLD);
+        setProgress(100);
+
+        for (const host of results) {
+          await sleep(150);
+          setHosts(prev => [...prev, host]);
+        }
+
+        await sleep(600);
+        setScreen("results");
+
+      } else {
+        // Demo mode fallback
+        const lines = [
+          { t:0,    color:TEAL,       text:`[DEMO]      Running in demo mode` },
+          { t:500,  color:"#7fdbff",  text:`[DISCO]     Host found → 192.168.1.1   (Netgear)` },
+          { t:900,  color:"#7fdbff",  text:`[DISCO]     Host found → 192.168.1.10  (Raspberry Pi)` },
+          { t:1300, color:"#7fdbff",  text:`[DISCO]     Host found → 192.168.1.15  (Apple)` },
+          { t:1700, color:"#7fdbff",  text:`[DISCO]     Host found → 192.168.1.20  (Samsung)` },
+          { t:2100, color:"#7fdbff",  text:`[DISCO]     Host found → 192.168.1.25  (Nest Labs)` },
+          { t:2500, color:"#7fdbff",  text:`[DISCO]     Host found → 192.168.1.30  (Dell)` },
+          { t:2900, color:"#e74c3c",  text:`[CRIT]      192.168.1.30 → port 3389 open (RDP)` },
+          { t:3300, color:"#e74c3c",  text:`[CRIT]      192.168.1.10 → port 5900 open (VNC)` },
+          { t:3700, color:"#f39c12",  text:`[WARN]      192.168.1.1  → port 22 open (SSH)` },
+          { t:4100, color:TEAL,       text:`[RISK]      Calculating risk scores...` },
+          { t:4500, color:"#2ecc71",  text:`[DONE]      Scan complete — demo data loaded` },
+          { t:4800, color:GOLD,       text:`[BSC]       Generating report...` },
+        ];
+        for (let i = 0; i < lines.length; i++) {
+          await sleep(i===0 ? 0 : lines[i].t - lines[i-1].t);
+          setScanLines(prev => [...prev, lines[i]]);
+          setProgress(Math.round((i/(lines.length-1))*100));
+        }
+        for (let i = 0; i < FAKE_HOSTS.length; i++) {
+          await sleep(300);
+          setHosts(prev => [...prev, FAKE_HOSTS[i]]);
+        }
+        await sleep(600);
+        setScreen("results");
+      }
+
+    } catch (err) {
+      addLine(`[ERROR]     Scan failed: ${err.message}`, "#e74c3c");
+      addLine(`[TIP]       Check network connection and try again`, DIM);
+      setProgress(100);
+      await sleep(2000);
+      setScreen("results");
     }
-    for (let i = 0; i < FAKE_HOSTS.length; i++) {
-      await sleep(300);
-      setHosts(prev => [...prev, FAKE_HOSTS[i]]);
-    }
-    await sleep(600);
-    setScreen("results");
   }
 
   if (screen === "home") return (

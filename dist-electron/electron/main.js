@@ -2,17 +2,20 @@ import { app, BrowserWindow } from 'electron';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-var require = createRequire(import.meta.url);
-var __dirname = path.dirname(fileURLToPath(import.meta.url));
+import { registerScanHandlers } from './scanner.js';
+const require = createRequire(import.meta.url);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname, '..');
-export var VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL'];
-export var MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron');
-export var RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist');
+export const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL'];
+export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron');
+export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist');
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
     ? path.join(process.env.APP_ROOT, 'public')
     : RENDERER_DIST;
-var win;
+let win;
 function createWindow() {
+    const preloadPath = path.join(__dirname, 'preload.cjs');
+    console.log('Preload path:', preloadPath);
     win = new BrowserWindow({
         width: 1280,
         height: 820,
@@ -21,28 +24,33 @@ function createWindow() {
         title: 'BSC Network Scout',
         backgroundColor: '#12142a',
         webPreferences: {
-            preload: path.join(__dirname, 'preload.mjs'),
+            preload: preloadPath,
             nodeIntegration: false,
             contextIsolation: true,
+            sandbox: false,
         },
     });
     win.setMenuBarVisibility(false);
     if (VITE_DEV_SERVER_URL) {
         win.loadURL(VITE_DEV_SERVER_URL);
+        win.webContents.openDevTools();
     }
     else {
         win.loadFile(path.join(RENDERER_DIST, 'index.html'));
     }
 }
-app.on('window-all-closed', function () {
+app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
         app.quit();
         win = null;
     }
 });
-app.on('activate', function () {
+app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
         createWindow();
     }
 });
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+    registerScanHandlers();
+    createWindow();
+});
