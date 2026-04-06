@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 const NAVY = "#1a1d35";
 const NAVY2 = "#12142a";
 const GOLD = "#c9a84c";
-const TEAL = "#64ffda";
+const TEAL = "#c9a84c";
 const WHITE = "#f0f2ff";
 const DIM = "#8892b0";
 
@@ -214,7 +214,7 @@ function ReportScreen({ hosts, onBack }) {
           <div style={{ flexShrink: 0, textAlign: "center", background: "#0f1228",
             border: "1px solid #2a2d4a", borderRadius: 8, padding: "16px 20px" }}>
             <div style={{ color: DIM, fontSize: 10, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>Contact</div>
-            <div style={{ color: WHITE, fontSize: 12, marginBottom: 4 }}>dgarrett@bravosixcyber.com</div>
+            <div style={{ color: WHITE, fontSize: 12, marginBottom: 4 }}>info@bravosixcyber.com</div>
             <div style={{ color: WHITE, fontSize: 12, marginBottom: 4 }}>656.245.8307</div>
             <div style={{ color: TEAL, fontSize: 12 }}>SDVOSB · CISSP · CICP</div>
           </div>
