@@ -1,23 +1,24 @@
 {
   "name": "bsc-network-scout",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "concurrently -k \"vite\" \"npm run electron:dev\"",
     "electron:dev": "wait-on http://localhost:5173 && npm run compile && VITE_DEV_SERVER_URL=http://localhost:5173 npx electron .",
     "compile": "tsc -p tsconfig.node.json && tsc -p tsconfig.preload.json && mv dist-electron/electron/preload.js dist-electron/electron/preload.cjs",
-    "build": "vite build && npm run compile && electron-builder",
+    "build": "npm run compile && vite build && electron-builder",
     "preview": "vite preview"
   },
   "dependencies": {
-    "pdfkit": "^0.18.0",
-    "ping": "^1.0.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "pdfkit": "^0.15.0",
+    "ping": "^0.4.4",
+    "nmap": "^1.1.5"
   },
   "devDependencies": {
-    "@types/pdfkit": "^0.17.5",
+    "@types/pdfkit": "^0.13.9",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@vitejs/plugin-react": "^4.0.0",

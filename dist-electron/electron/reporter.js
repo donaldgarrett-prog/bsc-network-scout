@@ -49,7 +49,7 @@ export function registerReportHandlers() {
             const high = hosts.filter((h) => h.risk === 'high').length;
             const medium = hosts.filter((h) => h.risk === 'medium').length;
             const low = hosts.filter((h) => h.risk === 'low').length;
-            const score = Math.max(0, 100 - high * 22 - medium * 9 - low * 2);
+            const score = Math.max(10, Math.round(100 - high * 18 - medium * 7 - low * 1));
             const grade = score >= 80 ? 'B' : score >= 60 ? 'C' : score >= 40 ? 'D' : 'F';
             doc.moveDown(3);
             doc.fontSize(12).fillColor(NAVY).font('Helvetica-Bold').text('SCAN SUMMARY', 50);
@@ -117,7 +117,7 @@ export function registerReportHandlers() {
                 doc.moveDown(0.3);
                 for (const issue of host.issues) {
                     doc.fontSize(9).fillColor('#333333').font('Helvetica')
-                        .text(`▸  ${issue}`, 65, doc.y, { width: 490 });
+                        .text(`-  ${issue}`, 65, doc.y, { width: 490 });
                     doc.moveDown(0.2);
                 }
                 doc.moveDown(0.5);
