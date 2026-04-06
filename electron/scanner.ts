@@ -211,3 +211,12 @@ export function registerScanHandlers() {
     }
   })
 }
+
+export async function detectSubnet(): Promise<string> {
+  try {
+    const { stdout } = await execAsync('ifconfig | grep "inet " | grep -v 127.0.0.1')
+    const match = stdout.match(/inet (\d+\.\d+\.\d+)\.\d+/)
+    if (match) return `${match[1]}.0/24`
+  } catch {}
+  return '192.168.1.0/24'
+}

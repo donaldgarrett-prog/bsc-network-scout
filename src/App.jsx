@@ -231,7 +231,15 @@ export default function App() {
   const [hosts, setHosts] = useState([]);
   const [selectedHost, setSelectedHost] = useState(null);
   const [scanType, setScanType] = useState("quick");
-  const [subnet, setSubnet] = useState("192.168.4.0/22");
+  const [subnet, setSubnet] = useState("192.168.1.0/24");
+
+  useEffect(() => {
+    if (window.bscScout && window.bscScout.detectSubnet) {
+      window.bscScout.detectSubnet().then(detected => {
+        if (detected) setSubnet(detected);
+      }).catch(() => {});
+    }
+  }, []);
   const termRef = useRef(null);
 
   useEffect(() => { if (termRef.current) termRef.current.scrollTop = termRef.current.scrollHeight; }, [scanLines]);
@@ -502,6 +510,17 @@ export default function App() {
             style={{ background:GOLD, color:NAVY, border:"none", borderRadius:5,
               padding:"6px 16px", fontSize:12, fontWeight:700, cursor:"pointer" }}>
             View Full Report →
+          </button>
+          <button onClick={async () => {
+            if (window.bscScout && window.bscScout.generatePdf) {
+              const result = await window.bscScout.generatePdf({ hosts, subnet });
+              if (result.success) alert(`Report saved to: ${result.filePath}`);
+              else if (result.reason !== 'canceled') alert(`Error: ${result.reason}`);
+            }
+          }}
+            style={{ background:"transparent", border:`1px solid ${GOLD}`, color:GOLD,
+              borderRadius:5, padding:"6px 14px", fontSize:12, fontWeight:600, cursor:"pointer" }}>
+            Save PDF Report
           </button>
           <button onClick={() => setScreen("home")}
             style={{ background:"transparent", border:"1px solid #2a2d4a", color:DIM,

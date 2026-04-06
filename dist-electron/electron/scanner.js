@@ -222,3 +222,15 @@ export function registerScanHandlers() {
         }
     }));
 }
+export function detectSubnet() {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const { stdout } = yield execAsync('ifconfig | grep "inet " | grep -v 127.0.0.1');
+            const match = stdout.match(/inet (\d+\.\d+\.\d+)\.\d+/);
+            if (match)
+                return `${match[1]}.0/24`;
+        }
+        catch (_a) { }
+        return '192.168.1.0/24';
+    });
+}

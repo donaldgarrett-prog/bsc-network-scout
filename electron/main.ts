@@ -1,8 +1,9 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, ipcMain } from 'electron'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { registerScanHandlers } from './scanner.js'
+import { registerScanHandlers, detectSubnet } from './scanner.js'
+import { registerReportHandlers } from './reporter.js'
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -63,5 +64,9 @@ app.on('activate', () => {
 
 app.whenReady().then(() => {
   registerScanHandlers()
+  registerReportHandlers()
+  ipcMain.handle('bsc:detect-subnet', async () => {
+    return await detectSubnet()
+  })
   createWindow()
 })

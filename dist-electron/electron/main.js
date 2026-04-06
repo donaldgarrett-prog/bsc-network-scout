@@ -1,8 +1,18 @@
-import { app, BrowserWindow } from 'electron';
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+import { app, BrowserWindow, ipcMain } from 'electron';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { registerScanHandlers } from './scanner.js';
+import { registerScanHandlers, detectSubnet } from './scanner.js';
+import { registerReportHandlers } from './reporter.js';
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname, '..');
@@ -52,5 +62,9 @@ app.on('activate', () => {
 });
 app.whenReady().then(() => {
     registerScanHandlers();
+    registerReportHandlers();
+    ipcMain.handle('bsc:detect-subnet', () => __awaiter(void 0, void 0, void 0, function* () {
+        return yield detectSubnet();
+    }));
     createWindow();
 });
