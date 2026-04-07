@@ -11,13 +11,13 @@
     "dist-electron"
   ],
   "mac": {
-    "target": [
-      "dmg"
-    ],
+    "icon": "public/icon.icns",
+    "target": ["dmg"],
     "category": "public.app-category.utilities",
     "artifactName": "BSC-Network-Scout-${version}-Mac.${ext}"
   },
   "win": {
+    "icon": "public/icon.ico",
     "target": [
       {
         "target": "nsis",
