@@ -9,6 +9,28 @@ async function getLocalSubnet(): Promise<string> {
   try {
     if (isWindows) {
       const { stdout } = await execAsync('ipconfig')
+      // Split into adapter blocks
+      const blocks = stdout.split(/\r?\n\r?\n/)
+      for (const block of blocks) {
+        // Only use blocks that have a real Default Gateway
+        if (block.includes('Default Gateway') && 
+            !block.match(/Default Gateway[.\s]+:\s*\r?\n/) &&
+            !block.match(/Default Gateway[.\s]+:\s+fe80/)) {
+          const match = block.match(/IPv4 Address[.\s]+:\s+(\d+\.\d+\.\d+)\.\d+/)
+          if (match) return `${match[1]}.0/24`
+        }
+      }
+    } else {
+      const { stdout } = await execAsync('ifconfig | grep "inet " | grep -v 127.0.0.1')
+      const match = stdout.match(/inet (\d+\.\d+\.\d+)\.\d+/)
+      if (match) return `${match[1]}.0/24`
+    }
+  } catch {}
+  return '192.168.1.0/24'
+}async function getLocalSubnet(): Promise<string> {
+  try {
+    if (isWindows) {
+      const { stdout } = await execAsync('ipconfig')
       const match = stdout.match(/IPv4 Address[.\s]+:\s+(\d+\.\d+\.\d+)\.\d+/)
       if (match) return `${match[1]}.0/24`
     } else {
