@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('bscScout', {
   onScanProgress: (callback: (data: any) => void) => {
     ipcRenderer.on('bsc:scan-progress', (_event: any, data: any) => callback(data))
   },
+  openExternal: (url: string) => ipcRenderer.invoke('bsc:open-external', url),
   removeScanProgress: () => {
     ipcRenderer.removeAllListeners('bsc:scan-progress')
   }

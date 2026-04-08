@@ -117,10 +117,16 @@ function HostDetail({ host }) {
             ? "This device has moderate exposure. Our team can implement fixes and establish monitoring."
             : "This device appears healthy. Our assessment confirms your security posture for this host."}
         </div>
-        <button style={{ background: GOLD, color: NAVY, border: "none", borderRadius: 4,
-          padding: "7px 16px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-          Book a Professional Assessment →
-        </button>
+        <<button style={{ background: GOLD, color: NAVY, border: "none", borderRadius: 5,
+  padding: "10px 22px", fontSize: 13, fontWeight: 800, cursor: "pointer" }}
+  onClick={() => window.bscScout.openExternal('https://bravosixcyber.com/contact')}>
+  Book a Free Consultation
+</button>
+<button style={{ background: "transparent", color: GOLD, border: `1px solid ${GOLD}`,
+  borderRadius: 5, padding: "10px 22px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+  onClick={() => window.bscScout.openExternal('https://bravosixcyber.com')}>
+  bravosixcyber.com →
+</button>
       </div>
     </div>
   );
