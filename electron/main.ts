@@ -1,4 +1,10 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+} else {
+  win.loadFile(path.join(RENDERER_DIST, 'index.html'))
+  win.webContents.openDevTools()
+}} else {
+  win.loadFile(path.join(RENDERER_DIST, 'index.html'))
+  win.webContents.openDevTools()
+}import { app, BrowserWindow, ipcMain } from 'electron'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
@@ -46,6 +52,7 @@ function createWindow() {
     win.webContents.openDevTools()
   } else {
     win.loadFile(path.join(RENDERER_DIST, 'index.html'))
+    winwin.webContents.openDevTools()
   }
 }
 
