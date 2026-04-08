@@ -1,28 +1,4 @@
-async function getLocalSubnet(): Promise<string> {
-  try {
-    if (isWindows) {
-      const { stdout } = await execAsync('ipconfig')
-      const lines = stdout.split(/\r?\n/)
-      let lastIp = ''
-      for (const line of lines) {
-        const ipMatch = line.match(/IPv4 Address[.\s]+:\s+(\d+\.\d+\.\d+\.\d+)/)
-        if (ipMatch) {
-          lastIp = ipMatch[1]
-        }
-        const gwMatch = line.match(/Default Gateway[.\s]+:\s+(\d+\.\d+\.\d+\.\d+)/)
-        if (gwMatch && lastIp) {
-          const parts = lastIp.split('.')
-          return `${parts[0]}.${parts[1]}.${parts[2]}.0/24`
-        }
-      }
-    } else {
-      const { stdout } = await execAsync('ifconfig | grep "inet " | grep -v 127.0.0.1')
-      const match = stdout.match(/inet (\d+\.\d+\.\d+)\.\d+/)
-      if (match) return `${match[1]}.0/24`
-    }
-  } catch {}
-  return '192.168.1.0/24'
-}import { ipcMain } from 'electron'
+import { ipcMain } from 'electron'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 
@@ -33,13 +9,15 @@ async function getLocalSubnet(): Promise<string> {
   try {
     if (isWindows) {
       const { stdout } = await execAsync('ipconfig')
-      const blocks = stdout.split(/\r?\n\r?\n/)
-      for (const block of blocks) {
-        if (block.includes('Default Gateway') &&
-            !block.match(/Default Gateway[.\s]+:\s*\r?\n/) &&
-            !block.match(/Default Gateway[.\s]+:\s+fe80/)) {
-          const match = block.match(/IPv4 Address[.\s]+:\s+(\d+\.\d+\.\d+)\.\d+/)
-          if (match) return `${match[1]}.0/24`
+      const lines = stdout.split(/\r?\n/)
+      let lastIp = ''
+      for (const line of lines) {
+        const ipMatch = line.match(/IPv4 Address[.\s]+:\s+(\d+\.\d+\.\d+\.\d+)/)
+        if (ipMatch) lastIp = ipMatch[1]
+        const gwMatch = line.match(/Default Gateway[.\s]+:\s+(\d+\.\d+\.\d+\.\d+)/)
+        if (gwMatch && lastIp) {
+          const parts = lastIp.split('.')
+          return `${parts[0]}.${parts[1]}.${parts[2]}.0/24`
         }
       }
     } else {
