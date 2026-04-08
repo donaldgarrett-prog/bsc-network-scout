@@ -7,7 +7,7 @@
     "dev": "concurrently -k \"vite\" \"npm run electron:dev\"",
     "electron:dev": "wait-on http://localhost:5173 && npm run compile && VITE_DEV_SERVER_URL=http://localhost:5173 npx electron .",
     "compile": "tsc -p tsconfig.node.json && tsc -p tsconfig.preload.json && node -e \"const fs=require('fs');fs.renameSync('dist-electron/electron/preload.js','dist-electron/electron/preload.cjs')\"",
-    "build": "npm run compile && vite build && electron-builder",
+    "build": "npm run compile && node rename-preload.cjs && npx vite build && npx electron-builder"
     "preview": "vite preview"
   },
   "dependencies": {
