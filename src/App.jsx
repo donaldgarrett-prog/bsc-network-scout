@@ -380,6 +380,7 @@ export default function App() {
         </div>
         <div style={{ color:GOLD, fontSize:11, fontWeight:700, letterSpacing:3,
           textTransform:"uppercase", marginBottom:12 }}>Bravo Six Cyber LLC</div>
+          <img src="./bsc-logo.png" alt="Bravo Six Cyber" style={{ width:100, height:100, objectFit:"contain", marginBottom:16 }} />
         <h1 style={{ fontSize:36, fontWeight:800, margin:0, marginBottom:10,
           background:`linear-gradient(135deg, ${WHITE} 40%, ${TEAL} 100%)`,
           WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>BSC Network Scout</h1>
