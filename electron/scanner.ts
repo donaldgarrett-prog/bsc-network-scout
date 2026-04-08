@@ -9,30 +9,15 @@ async function getLocalSubnet(): Promise<string> {
   try {
     if (isWindows) {
       const { stdout } = await execAsync('ipconfig')
-      // Split into adapter blocks
       const blocks = stdout.split(/\r?\n\r?\n/)
       for (const block of blocks) {
-        // Only use blocks that have a real Default Gateway
-        if (block.includes('Default Gateway') && 
+        if (block.includes('Default Gateway') &&
             !block.match(/Default Gateway[.\s]+:\s*\r?\n/) &&
             !block.match(/Default Gateway[.\s]+:\s+fe80/)) {
           const match = block.match(/IPv4 Address[.\s]+:\s+(\d+\.\d+\.\d+)\.\d+/)
           if (match) return `${match[1]}.0/24`
         }
       }
-    } else {
-      const { stdout } = await execAsync('ifconfig | grep "inet " | grep -v 127.0.0.1')
-      const match = stdout.match(/inet (\d+\.\d+\.\d+)\.\d+/)
-      if (match) return `${match[1]}.0/24`
-    }
-  } catch {}
-  return '192.168.1.0/24'
-}async function getLocalSubnet(): Promise<string> {
-  try {
-    if (isWindows) {
-      const { stdout } = await execAsync('ipconfig')
-      const match = stdout.match(/IPv4 Address[.\s]+:\s+(\d+\.\d+\.\d+)\.\d+/)
-      if (match) return `${match[1]}.0/24`
     } else {
       const { stdout } = await execAsync('ifconfig | grep "inet " | grep -v 127.0.0.1')
       const match = stdout.match(/inet (\d+\.\d+\.\d+)\.\d+/)
@@ -61,14 +46,12 @@ async function getArpTable(): Promise<Map<string, string>> {
     const lines = stdout.split('\n')
     for (const line of lines) {
       if (isWindows) {
-        // Windows: 192.168.1.1    aa-bb-cc-dd-ee-ff    dynamic
         const match = line.match(/(\d+\.\d+\.\d+\.\d+)\s+([a-f0-9\-]{17})/i)
         if (match) {
           const mac = match[2].replace(/-/g, ':').toUpperCase()
           arpMap.set(match[1], mac)
         }
       } else {
-        // Mac/Linux: ? (192.168.1.1) at aa:bb:cc:dd:ee:ff
         const match = line.match(/\((\d+\.\d+\.\d+\.\d+)\)\s+at\s+([a-f0-9:]+)/i)
         if (match && match[2] !== '(incomplete)' && match[2] !== 'ff:ff:ff:ff:ff:ff') {
           arpMap.set(match[1], match[2].toUpperCase())
@@ -103,12 +86,11 @@ async function scanPorts(ip: string, ports: number[]): Promise<number[]> {
   const checks = ports.map(async (port) => {
     try {
       if (isWindows) {
-        // Use PowerShell Test-NetConnection on Windows
-        await execAsync(
+        const { stdout } = await execAsync(
           `powershell -Command "Test-NetConnection -ComputerName ${ip} -Port ${port} -InformationLevel Quiet -WarningAction SilentlyContinue"`,
-          { timeout: 2000 }
+          { timeout: 3000 }
         )
-        openPorts.push(port)
+        if (stdout.trim() === 'True') openPorts.push(port)
       } else {
         await execAsync(`nc -z -w 1 ${ip} ${port}`, { timeout: 1500 })
         openPorts.push(port)
@@ -169,9 +151,7 @@ function analyzeHost(ip: string, mac: string, vendor: string, ports: number[]): 
     issues.push('IoT device on primary network — segmentation recommended')
   }
 
-  if (issues.length === 0) {
-    issues.push('No risky open ports detected — healthy')
-  }
+  if (issues.length === 0) issues.push('No risky open ports detected — healthy')
 
   let name = vendor || 'Unknown Device'
   if (vendorLower.includes('netgear') || vendorLower.includes('cisco')) name = 'Router / Gateway'
