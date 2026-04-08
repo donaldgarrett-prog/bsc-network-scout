@@ -2,7 +2,7 @@
   win.loadFile(path.join(RENDERER_DIST, 'index.html'))
   win.webContents.openDevTools()
 }} else {
-  win.loadFile(path.join(RENDERER_DIST, 'index.html'))
+  win.loadFile win.webContents.openDevTools()(path.join(RENDERER_DIST, 'index.html'))
   win.webContents.openDevTools()
 }import { app, BrowserWindow, ipcMain } from 'electron'
 import { createRequire } from 'node:module'
