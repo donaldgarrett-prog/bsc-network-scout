@@ -3,44 +3,60 @@ import { exec } from 'child_process'
 import { promisify } from 'util'
 
 const execAsync = promisify(exec)
+const isWindows = process.platform === 'win32'
 
-// Get local subnet from ifconfig
 async function getLocalSubnet(): Promise<string> {
   try {
-    const { stdout } = await execAsync('ifconfig | grep "inet " | grep -v 127.0.0.1')
-    const match = stdout.match(/inet (\d+\.\d+\.\d+)\.\d+/)
-    if (match) return `${match[1]}.0/24`
+    if (isWindows) {
+      const { stdout } = await execAsync('ipconfig')
+      const match = stdout.match(/IPv4 Address[.\s]+:\s+(\d+\.\d+\.\d+)\.\d+/)
+      if (match) return `${match[1]}.0/24`
+    } else {
+      const { stdout } = await execAsync('ifconfig | grep "inet " | grep -v 127.0.0.1')
+      const match = stdout.match(/inet (\d+\.\d+\.\d+)\.\d+/)
+      if (match) return `${match[1]}.0/24`
+    }
   } catch {}
   return '192.168.1.0/24'
 }
 
-// Ping a single host
 async function pingHost(ip: string): Promise<boolean> {
   try {
-    await execAsync(`ping -c 1 -W 1 ${ip}`, { timeout: 2000 })
+    const cmd = isWindows
+      ? `ping -n 1 -w 1000 ${ip}`
+      : `ping -c 1 -W 1 ${ip}`
+    await execAsync(cmd, { timeout: 2000 })
     return true
   } catch {
     return false
   }
 }
 
-// Get ARP table
 async function getArpTable(): Promise<Map<string, string>> {
   const arpMap = new Map<string, string>()
   try {
     const { stdout } = await execAsync('arp -a')
     const lines = stdout.split('\n')
     for (const line of lines) {
-      const match = line.match(/\((\d+\.\d+\.\d+\.\d+)\)\s+at\s+([a-f0-9:]+)/i)
-      if (match && match[2] !== '(incomplete)' && match[2] !== 'ff:ff:ff:ff:ff:ff') {
-        arpMap.set(match[1], match[2].toUpperCase())
+      if (isWindows) {
+        // Windows: 192.168.1.1    aa-bb-cc-dd-ee-ff    dynamic
+        const match = line.match(/(\d+\.\d+\.\d+\.\d+)\s+([a-f0-9\-]{17})/i)
+        if (match) {
+          const mac = match[2].replace(/-/g, ':').toUpperCase()
+          arpMap.set(match[1], mac)
+        }
+      } else {
+        // Mac/Linux: ? (192.168.1.1) at aa:bb:cc:dd:ee:ff
+        const match = line.match(/\((\d+\.\d+\.\d+\.\d+)\)\s+at\s+([a-f0-9:]+)/i)
+        if (match && match[2] !== '(incomplete)' && match[2] !== 'ff:ff:ff:ff:ff:ff') {
+          arpMap.set(match[1], match[2].toUpperCase())
+        }
       }
     }
   } catch {}
   return arpMap
 }
 
-// Lookup vendor from MAC OUI
 function getVendor(mac: string): string {
   if (!mac || mac === 'Unknown') return 'Unknown'
   const oui = mac.replace(/:/g, '').substring(0, 6).toUpperCase()
@@ -60,20 +76,27 @@ function getVendor(mac: string): string {
   return vendors[oui] || 'Unknown'
 }
 
-// Scan ports on a host using nc (netcat) - no root required
 async function scanPorts(ip: string, ports: number[]): Promise<number[]> {
   const openPorts: number[] = []
   const checks = ports.map(async (port) => {
     try {
-      await execAsync(`nc -z -w 1 ${ip} ${port}`, { timeout: 1500 })
-      openPorts.push(port)
+      if (isWindows) {
+        // Use PowerShell Test-NetConnection on Windows
+        await execAsync(
+          `powershell -Command "Test-NetConnection -ComputerName ${ip} -Port ${port} -InformationLevel Quiet -WarningAction SilentlyContinue"`,
+          { timeout: 2000 }
+        )
+        openPorts.push(port)
+      } else {
+        await execAsync(`nc -z -w 1 ${ip} ${port}`, { timeout: 1500 })
+        openPorts.push(port)
+      }
     } catch {}
   })
   await Promise.all(checks)
   return openPorts.sort((a, b) => a - b)
 }
 
-// Determine risk and issues from open ports and device type
 function analyzeHost(ip: string, mac: string, vendor: string, ports: number[]): any {
   const vendorLower = vendor.toLowerCase()
 
@@ -146,20 +169,15 @@ function analyzeHost(ip: string, mac: string, vendor: string, ports: number[]): 
 export function registerScanHandlers() {
   ipcMain.handle('bsc:start-scan', async (event, subnet: string) => {
     try {
-      // Parse subnet to get base IP and range
       const parts = subnet.split('/')
       const baseIp = parts[0].split('.')
-      const prefix = parseInt(parts[1]) || 24
-      
-      // For /24 scan 254 hosts, for larger networks cap at 254 for performance
       const base = `${baseIp[0]}.${baseIp[1]}.${baseIp[2]}`
       const hosts: any[] = []
 
-      // Step 1: Ping sweep to discover live hosts
       event.sender.send('bsc:scan-progress', { phase: 'ping', message: 'Pinging hosts...' })
-      
-      const pingPromises: Promise<void>[] = []
+
       const liveIps: string[] = []
+      const pingPromises: Promise<void>[] = []
 
       for (let i = 1; i <= 254; i++) {
         const ip = `${base}.${i}`
@@ -170,18 +188,15 @@ export function registerScanHandlers() {
         )
       }
 
-      // Run pings in batches of 30
       const batchSize = 30
       for (let i = 0; i < pingPromises.length; i += batchSize) {
         await Promise.all(pingPromises.slice(i, i + batchSize))
       }
 
-      // Step 2: Get ARP table for MAC addresses
       event.sender.send('bsc:scan-progress', { phase: 'arp', found: liveIps.length })
       const arpTable = await getArpTable()
 
-      // Add any ARP entries not caught by ping
-      for (const [ip, mac] of arpTable) {
+      for (const [ip] of arpTable) {
         if (ip.startsWith(base) && !liveIps.includes(ip)) {
           liveIps.push(ip)
         }
@@ -189,7 +204,6 @@ export function registerScanHandlers() {
 
       if (liveIps.length === 0) return []
 
-      // Step 3: Port scan each live host
       event.sender.send('bsc:scan-progress', { phase: 'ports', found: liveIps.length })
 
       const TOP_PORTS = [21, 22, 23, 25, 80, 139, 443, 445, 3389, 4444, 5900, 7676, 8080, 8443, 8888]
@@ -213,10 +227,5 @@ export function registerScanHandlers() {
 }
 
 export async function detectSubnet(): Promise<string> {
-  try {
-    const { stdout } = await execAsync('ifconfig | grep "inet " | grep -v 127.0.0.1')
-    const match = stdout.match(/inet (\d+\.\d+\.\d+)\.\d+/)
-    if (match) return `${match[1]}.0/24`
-  } catch {}
-  return '192.168.1.0/24'
+  return await getLocalSubnet()
 }
