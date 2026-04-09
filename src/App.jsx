@@ -72,8 +72,8 @@ const PORT_SERVICE = {
 }
 
 function useCVEs(ports) {
-  const [cves, setCves] = React.useState({})
-  React.useEffect(() => {
+  const [cves, setCves] = useState({})
+  useEffect(() => {
     if (!ports || ports.length === 0) return
     ports.forEach(port => {
       const service = PORT_SERVICE[port]
@@ -431,7 +431,8 @@ export default function App() {
       <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center",
         justifyContent:"center", padding:"48px 40px", textAlign:"center" }}>
         <div style={{ position:"relative", marginBottom:32 }}>
-          <div style={{ width:80, height:80, borderRadius:"50%", background:`${TEAL}10`,
+          <img src="./bsc-logo.png" alt="Bravo Six Cyber" 
+  style={{ width:200, height:200, objectFit:"contain", marginBottom:16 }} />
             border:`2px solid ${TEAL}40`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:36 }}>⬡</div>
           <div style={{ position:"absolute", top:-4, right:-4, width:20, height:20,
             borderRadius:"50%", background:GOLD, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10 }}>●</div>
