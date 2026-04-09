@@ -64,8 +64,41 @@ function Row({ label, value, last }) {
     </div>
   );
 }
+const PORT_SERVICE = {
+  21: 'ftp', 22: 'openssh', 23: 'telnet', 25: 'smtp',
+  80: 'apache http', 139: 'netbios', 443: 'openssl',
+  445: 'samba smb', 3389: 'windows rdp', 4444: 'metasploit',
+  5900: 'vnc', 8080: 'apache tomcat', 8443: 'https', 8888: 'http'
+}
 
+function useCVEs(ports) {
+  const [cves, setCves] = React.useState({})
+  React.useEffect(() => {
+    if (!ports || ports.length === 0) return
+    ports.forEach(port => {
+      const service = PORT_SERVICE[port]
+      if (!service) return
+      fetch(`https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=${encodeURIComponent(service)}&resultsPerPage=5`)
+        .then(r => r.json())
+        .then(data => {
+          const items = data.vulnerabilities || []
+          const critical = items.filter(v => {
+            const score = v.cve?.metrics?.cvssMetricV31?.[0]?.cvssData?.baseScore
+            return score >= 9.0
+          }).length
+          const high = items.filter(v => {
+            const score = v.cve?.metrics?.cvssMetricV31?.[0]?.cvssData?.baseScore
+            return score >= 7.0 && score < 9.0
+          }).length
+          setCves(prev => ({ ...prev, [port]: { total: items.length, critical, high } }))
+        })
+        .catch(() => {})
+    })
+  }, [ports?.join(',')])
+  return cves
+}
 function HostDetail({ host }) {
+  const cves = useCVEs(host?.ports)
   if (!host) return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
       height: "100%", color: DIM, gap: 12 }}>
@@ -104,6 +137,31 @@ function HostDetail({ host }) {
             <span style={{ color: "#c8cfe8", fontSize: 12, lineHeight: 1.5 }}>{issue}</span>
           </div>
         ))}
+        {host.ports.length > 0 && (
+  <div style={{ marginBottom: 16 }}>
+    <div style={{ color: TEAL, fontSize: 11, fontWeight: 700, letterSpacing: 1.5,
+      textTransform: "uppercase", marginBottom: 10 }}>CVE Intelligence</div>
+    {host.ports.map(port => (
+      <div key={port} style={{ display: "flex", justifyContent: "space-between",
+        alignItems: "center", marginBottom: 8, background: "#1a1d35",
+        borderRadius: 5, padding: "8px 12px" }}>
+        <span style={{ color: WHITE, fontSize: 12, fontFamily: "'Courier New', monospace" }}>
+          Port {port} — {PORT_SERVICE[port] || 'unknown'}
+        </span>
+        {cves[port] ? (
+          <span style={{ fontSize: 11, color: cves[port].critical > 0 ? "#ff4444" :
+            cves[port].high > 0 ? GOLD : TEAL }}>
+            {cves[port].critical > 0 ? `⚠ ${cves[port].critical} critical CVEs` :
+             cves[port].high > 0 ? `▲ ${cves[port].high} high CVEs` :
+             `✓ ${cves[port].total} CVEs found`}
+          </span>
+        ) : (
+          <span style={{ fontSize: 11, color: DIM }}>Looking up...</span>
+        )}
+      </div>
+    ))}
+  </div>
+)}
       </div>
       <div style={{ background: "linear-gradient(135deg, #1a1d35 0%, #12142a 100%)",
         border: `1px solid ${GOLD}40`, borderRadius: 6, padding: 14, marginTop: 20 }}>
