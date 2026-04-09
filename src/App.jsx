@@ -430,16 +430,10 @@ export default function App() {
       </div>
       <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center",
         justifyContent:"center", padding:"48px 40px", textAlign:"center" }}>
-        <div style={{ position:"relative", marginBottom:32 }}>
-          <img src="./bsc-logo.png" alt="Bravo Six Cyber" 
-  style={{ width:200, height:200, objectFit:"contain", marginBottom:16 }} />
-            border:`2px solid ${TEAL}40`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:36 }}>⬡</div>
-          <div style={{ position:"absolute", top:-4, right:-4, width:20, height:20,
-            borderRadius:"50%", background:GOLD, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10 }}>●</div>
-        </div>
+        <img src="./bsc-logo.png" alt="Bravo Six Cyber"
+          style={{ width:200, height:200, objectFit:"contain", marginBottom:24 }} />
         <div style={{ color:GOLD, fontSize:11, fontWeight:700, letterSpacing:3,
           textTransform:"uppercase", marginBottom:12 }}>Bravo Six Cyber LLC</div>
-          <img src="./bsc-logo.png" alt="Bravo Six Cyber" style={{ width:100, height:100, objectFit:"contain", marginBottom:16 }} />
         <h1 style={{ fontSize:36, fontWeight:800, margin:0, marginBottom:10,
           background:`linear-gradient(135deg, ${WHITE} 40%, ${TEAL} 100%)`,
           WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>BSC Network Scout</h1>
